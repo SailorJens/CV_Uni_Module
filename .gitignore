@@ -1,0 +1,10 @@
+.DS
+.DS_Store
+.venv
+.venv10
+/nlp_env
+__pycache__
+/data
+
+/outputs-lora-sst2
+/outputs-lora-sst2-merged
