@@ -2,9 +2,43 @@ import numpy as np
 import matplotlib.pyplot as plt
 import cv2
 
+
+# ROI Extraction
+# Make the coordinates explicit to avoid misunderstandings
+def extract_region_of_interest(image: np.ndarray, topleft_x: int, topleft_y: int, bottomright_x: int, bottomright_y: int) -> np.ndarray:
+    """
+    Extract a region of interest from an image.
+    
+    The ROI is define by the top left point and the bottom right point. 
+
+    Args:
+        image (np.ndarray). The image.
+        topleft_x, topleft_y, bottomright_x, bottomright_y (int): Co-ordinates of rectangle points
+
+    """
+    roi = image[topleft_y:bottomright_y, topleft_x:bottomright_x]
+    return roi
+
+
+
 # Resize an image to the given width and height
 # Returns the resized image as a numpy array
 def resize_image(image: np.ndarray, width: int = None, height: int = None, scale: float = None) -> np.ndarray:
+    """
+    Resize an image.
+    Scales by either providing height and width OR scale. 
+
+    If all are given, scale is used. 
+    If none are given, the original is returned. 
+
+    Can raise Type Error and cv2.error.
+    
+    Args:
+        image (np.ndarray). The image.
+        width (int). The new width.
+        height (int). The new width.
+
+    """
     # Retrieve original height and width from shape. 
     original_height = image.shape[0]
     original_width = image.shape[1]
@@ -49,6 +83,8 @@ def resize_image(image: np.ndarray, width: int = None, height: int = None, scale
 def load_rgb_image_from_path(image_path: str) -> np.ndarray:
     """
     Load an image and convert to RGB format.
+
+    Can raise FileNotFoundError, PermissionError and cv2.error.
     
     Args:
         image_path (str): Path to the image file.
@@ -60,8 +96,9 @@ def load_rgb_image_from_path(image_path: str) -> np.ndarray:
 
 # Examplatory usage
 def main():
-    image_path = '5.jpg'
+    image_path = 'fruits.jpg'
         
+    # LOAD IMAGE
     try:
         image = load_rgb_image_from_path(image_path=image_path)
         # Display the image using matplotlib
@@ -77,8 +114,16 @@ def main():
         print("OpenCV error: ", e)
         return
     
+
+    # EXTRACT REGION OF INTEREST
+     
+    image = extract_region_of_interest(image=image, topleft_x=375, topleft_y=1350, bottomright_x=975, bottomright_y=1950)
+    
+    
+    # RESIZE IMAGE
     try:
-        image = resize_image(image=image, scale=0.1)
+        #image = resize_image(image=image, scale=0.5)
+        pass
     except TypeError:
         print("Type Error")
         return
