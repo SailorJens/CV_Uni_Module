@@ -143,6 +143,82 @@ def resize_image(image: np.ndarray, width: int = None, height: int = None, scale
 
 
 
+
+# ANNOTATE IMAGE
+# If all features should be cover by one function, I need to to flexibly collect the required parameters
+def annotate_image(
+    image: np.ndarray,
+    rectangle: dict | None = None,
+    circle: dict | None = None,
+    text: dict | None = None
+) -> np.ndarray:
+    """
+    Add visual elements (rectangle, circle, text) to an image.
+
+    Args:
+        image (np.ndarray): Input image (RGB format)
+        rectangle (dict, optional): Dictionary with keys:
+            - 'top_left': (x, y) tuple for top-left corner
+            - 'bottom_right': (x, y) tuple for bottom-right corner
+            - 'color': (R, G, B) tuple
+            - 'thickness': int, line thickness (-1 for filled)
+        circle (dict, optional): Dictionary with keys:
+            - 'center': (x, y) tuple
+            - 'radius': int
+            - 'color': (R, G, B) tuple
+            - 'thickness': int (-1 for filled)
+        text (dict, optional): Dictionary with keys:
+            - 'position': (x, y) tuple for bottom-left corner
+            - 'text': string to display
+            - 'font_scale': float
+            - 'color': (R, G, B) tuple
+            - 'thickness': int
+            - 'font': cv2 font (default cv2.FONT_HERSHEY_SIMPLEX)
+    
+    Returns:
+        np.ndarray: Image with visual elements added
+    """
+    # Make a copy to avoid modifying the original
+    img = image.copy()
+
+    # Draw rectangle if specified
+    if rectangle:
+        cv2.rectangle(
+            img,
+            pt1=rectangle['top_left'],
+            pt2=rectangle['bottom_right'],
+            color=rectangle.get('color', (0, 255, 0)),
+            thickness=rectangle.get('thickness', 2)
+        )
+
+    # Draw circle if specified
+    if circle:
+        cv2.circle(
+            img,
+            center=circle['center'],
+            radius=circle['radius'],
+            color=circle.get('color', (0, 0, 255)),
+            thickness=circle.get('thickness', 2)
+        )
+
+    # Add text if specified
+    if text:
+        cv2.putText(
+            img,
+            text=text['text'],
+            org=text['position'],
+            fontFace=text.get('font', cv2.FONT_HERSHEY_SIMPLEX),
+            fontScale=text.get('font_scale', 1.0),
+            color=text.get('color', (255, 255, 255)),
+            thickness=text.get('thickness', 2),
+            lineType=cv2.LINE_AA
+        )
+
+    return img
+
+
+
+
 # Load an image and convert it to RGB format
 # Returns the image as a numpy array
 def load_rgb_image_from_path(image_path: str) -> np.ndarray:
@@ -160,7 +236,7 @@ def load_rgb_image_from_path(image_path: str) -> np.ndarray:
 
 
 # Examplatory usage
-def main():
+def app():
     image_path = 'fruits.jpg'
         
     # LOAD IMAGE
@@ -197,9 +273,30 @@ def main():
         resize_canvas=False,
         bg_color_rgb=(18,127,56)
     )
-    
-    
 
+
+    # ANNOTATE IMAGE
+    image_annotated = annotate_image(
+        image = image,
+        rectangle={
+            'top_left': (400, 400),
+            'bottom_right': (900,900),
+            'color': (255,0,0),
+            'thickness' : 15
+        }
+    )
+    image_annotated = annotate_image(
+        image = image_annotated,
+        text={
+            'position':(400,400),
+            'text':'Annotation',
+            'font_scale':5.,
+            'color': (255,255,255),
+            'thickness':10
+        }
+    )
+
+    
     # EXTRACT REGION OF INTEREST
      
     image_roi = extract_region_of_interest(
@@ -210,18 +307,23 @@ def main():
         bottomright_y=1950
         )
     
-    fix, ax = plt.subplots(4,1)
+    fix, ax = plt.subplots(1,5, figsize=(20, 5))
     ax[0].imshow(image)
     ax[1].imshow(image_resized)
     ax[2].imshow(image_rotated)
     ax[3].imshow(image_roi)
+    ax[4].imshow(image_annotated)
+
 
     # Need show command to open pop-up window when not in Jupyter Notebook
     plt.show()
 
+    
+
+
 
 # Access point for example use
 if __name__ == "__main__":
-    main()
+    app()
     
     
