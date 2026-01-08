@@ -1,6 +1,71 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import cv2
+import math
+
+
+# Rotate an image
+# Select whether it should be resized, and what colour the background should have
+def rotate_image(
+        image: np.ndarray, 
+        angle: float = 0, 
+        resize_canvas: bool = True, 
+        bg_color_rgb : tuple[int, int, int] = (0, 0, 0)
+        ) -> np.ndarray: 
+    """
+    Rotate an image
+
+    Args:
+        image (np.ndarray): the image
+        angle (float): rotation angle in degrees of a 360 degree circle
+        resize_canvas (bool): True if original image size is kept and canvas changes, False if cancas stays and image is scaled
+        bg_color_rgb tuple[int, int, int]: Colour for new backgrouns pixels in RGB format
+    """
+    # Retrieve height and width of the image from the shape
+    (h, w) = image.shape[:2]
+    # calculate the center point for the rotation as integer
+    # here: width first, as that's what cv2 accepts as pont format(x, y)
+    # cf. https://opencv.org/blog/image-rotation-and-translation-using-opencv/
+    center = (w // 2, h // 2)
+    scale = 1
+    new_canvas_size = (w, h)
+    # convert angle to radians as input for trigonometric functions
+    theta = math.radians(angle) 
+
+    if resize_canvas:
+        # Calculate the new image size
+        # cf. https://math.stackexchange.com/questions/430763/size-of-new-box-rotated-and-the-rescaled
+        # 𝑤′=𝑤cos𝜃+ℎsin𝜃
+        # ℎ′=𝑤sin𝜃+ℎcos𝜃
+        new_w = abs(w * math.cos(theta)) + abs(h * math.sin(theta))
+        new_h = abs(w * math.sin(theta)) + abs(h * math.cos(theta))
+        new_canvas_size = (int(round(new_w)), int(round(new_h)))
+    else:
+        # cf. https://stackoverflow.com/questions/33866535/how-to-scale-a-rotated-rectangle-to-always-fit-another-rectangle
+        wr = abs(w * math.cos(theta)) + abs(h * math.sin(theta))
+        hr = abs(w * math.sin(theta)) + abs(h * math.cos(theta))
+        scale = min(w / wr, h / hr)
+
+        # This is still wrong, I need to also center the scaled image
+        # wr_scaled = wr * scale
+        # hr_scaled = hr * scale
+        # tx = (w - wr_scaled) / 2
+        # ty = (h - hr_scaled) / 2
+        # rotation_matrix[0, 2] += tx
+        # rotation_matrix[1, 2] += ty
+
+    # get the rotation matrix
+    rotation_matrix = cv2.getRotationMatrix2D(center, angle, scale)
+    # warp (apply) the affine transformation
+    rotated_image = cv2.warpAffine(
+        image, 
+        rotation_matrix, 
+        new_canvas_size, 
+        borderValue=(bg_color_rgb[2], bg_color_rgb[1], bg_color_rgb[0])
+        )
+    
+    return rotated_image
+
 
 
 # ROI Extraction
@@ -101,7 +166,6 @@ def main():
     # LOAD IMAGE
     try:
         image = load_rgb_image_from_path(image_path=image_path)
-        # Display the image using matplotlib
     # Catching file errors
     except FileNotFoundError:
         print("File does not exist.")
@@ -114,15 +178,9 @@ def main():
         print("OpenCV error: ", e)
         return
     
-
-    # EXTRACT REGION OF INTEREST
-     
-    image = extract_region_of_interest(image=image, topleft_x=375, topleft_y=1350, bottomright_x=975, bottomright_y=1950)
-    
-    
     # RESIZE IMAGE
     try:
-        #image = resize_image(image=image, scale=0.5)
+        image_resized = resize_image(image=image, scale=0.5)
         pass
     except TypeError:
         print("Type Error")
@@ -131,8 +189,33 @@ def main():
         print("OpenCV error: ", e)
         return
     
+
+    # ROTATE IMAGE
+    image_rotated = rotate_image(
+        image=image,
+        angle=37.6,
+        resize_canvas=False,
+        bg_color_rgb=(18,127,56)
+    )
     
-    plt.imshow(image)
+    
+
+    # EXTRACT REGION OF INTEREST
+     
+    image_roi = extract_region_of_interest(
+        image=image, 
+        topleft_x=375, 
+        topleft_y=1350, 
+        bottomright_x=975, 
+        bottomright_y=1950
+        )
+    
+    fix, ax = plt.subplots(4,1)
+    ax[0].imshow(image)
+    ax[1].imshow(image_resized)
+    ax[2].imshow(image_rotated)
+    ax[3].imshow(image_roi)
+
     # Need show command to open pop-up window when not in Jupyter Notebook
     plt.show()
 
