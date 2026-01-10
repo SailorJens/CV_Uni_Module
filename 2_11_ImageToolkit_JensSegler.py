@@ -5,7 +5,7 @@ import math
 
 
 # Rotate an image
-# Select whether it should be resized, and what colour the background should have
+# Select whether the image or the canvas should be resized, and what colour the background should have
 def rotate_image(
         image: np.ndarray, 
         angle: float = 0, 
