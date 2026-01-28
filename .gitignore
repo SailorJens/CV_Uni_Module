@@ -6,3 +6,4 @@ __pycache__
 /weights
 /runs
 yolo26n.pt
+yolo26n-seg.pt
