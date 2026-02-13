@@ -16,22 +16,103 @@ def draw_faces(frame, faces):
             (0, 0, 255), 
             2
             )  # Red box with thickness 2
+            # Create label text
+        label = f"x:{face[0]} y:{face[1]} w:{face[2]} h:{face[3]}"
+        
+        # Position text slightly above box
+        text_x = face[0]
+        text_y = face[1] - 10 if face[1] - 10 > 10 else face[1]  + 20
+        
+        # Draw text
+        cv2.putText(frame,
+                    label,
+                    (text_x, text_y),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.5,
+                    (0, 255, 0),
+                    1,
+                    cv2.LINE_AA)
     return frame
 
 
 
 def find_faces(frame, scale_factor):
-    mod_frame = frame.copy()
-    mod_frame = cv2.cvtColor(mod_frame, cv2.COLOR_BGR2GRAY)
-    # Resize frame for faster processing
-    mod_frame = cv2.resize(mod_frame, (0, 0), fx=scale_factor, fy=scale_factor)
-    faces = face_cascade.detectMultiScale(mod_frame, scaleFactor=1.1, minNeighbors=5)   
+    # Convert frame to grayscale for face detection
+    prepped_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    # Resize frame for faster processing by scale_factor
+    prepped_frame = cv2.resize(prepped_frame, (0, 0), fx=scale_factor, fy=scale_factor)
+    # Detect faces in the prepped frame
+    # Keep ScaleFactor low to ensure not to miss faces (reduce "false negatives")
+    # But increase minNeighbors to reduce false positives
+    faces = face_cascade.detectMultiScale(
+        prepped_frame, 
+        scaleFactor=1.1, 
+        minNeighbors=5
+        )   
     # Scale face coordinates back to original frame size
     scaled_faces = []
     for (x, y, w, h) in faces:
-        scaled_faces.append((int(x / scale_factor), int(y / scale_factor), int(w / scale_factor), int(h / scale_factor)))
+        scaled_faces.append(
+            (int(x / scale_factor), 
+             int(y / scale_factor), 
+             int(w / scale_factor), 
+             int(h / scale_factor)))
     return scaled_faces
 
+
+def calculate_IoU(boxA, boxB):
+    # boxA and boxB are in the format (x, y, w, h)
+
+    # first calculate the coordinates of the intersection rectangle
+    i_x_top_left = max(boxA[0], boxB[0])
+    i_y_top_left = max(boxA[1], boxB[1])
+    i_x_bottom_right = min(boxA[0] + boxA[2], boxB[0] + boxB[2])
+    i_y_bottom_right = min(boxA[1] + boxA[3], boxB[1] + boxB[3])
+
+    # Compute the area of intersection rectangle
+    # If the rectangles do not overlap, i_x_bottom_right - i_x_top_left 
+    # or i_y_bottom_right - i_y_top_left will be negative, 
+    # so we take max with 0 to ensure non-negative area
+    i_width = max(0, i_x_bottom_right - i_x_top_left)
+    i_height = max(0, i_y_bottom_right - i_y_top_left)
+    # If no overlap, the intersection area will be 0
+    i_area = i_width * i_height
+
+    # Compute the area of both boxes based on width * height
+    boxA_area = boxA[2] * boxA[3]
+    boxB_area = boxB[2] * boxB[3]
+
+    # The union area is the sum of both areas minus the intersection area (to avoid counting the intersection twice)
+    union_area = boxA_area + boxB_area - i_area
+
+    # Avoid division by zero: IoU is 0 if union_area is 0
+    # (in case both boxes are of zero area, which is a degenerate case)
+    if union_area == 0:
+        return 0.0  
+
+    # Compute the intersection over union by taking the intersection area 
+    # and dividing it by the sum of prediction + ground-truth areas - the interesection area
+    return i_area / float(union_area)
+
+
+# Remove faces that only appear in one frame and not in the next frame.
+# 
+def identify_valid_faces(face_tracker, new_faces):
+    new_face_tracker = []
+    # For each new face, check if it matches with any tracked face from previous frames using IoU.
+    # If it doesn't match with any tracked face, add it to the tracker with count 1. If it matches, update the count for that tracked face.
+    # Discard any tracked faces that have no match with the new batch of faces (i.e. they disappeared) 
+    for face in new_faces:
+        for tracked_face, count in face_tracker:
+            iou = calculate_IoU(face, tracked_face)
+            # If IoU is greater than 0.2, consider it the same face
+            # IoU can't be too high when skipping frames, or else movements are too fast to be tracked
+            if iou > 0.2:  
+                new_face_tracker.append((face, count+1))
+                break
+        else:  # If no match found, add new face to tracker with count 1
+            new_face_tracker.append((face, 1))
+    return new_face_tracker
 
 
 def start_feed(video_path, target_resolution=640, frame_skip_rate=5):
@@ -60,7 +141,7 @@ def start_feed(video_path, target_resolution=640, frame_skip_rate=5):
 
     # To buffer faces to avoid blinking when reducing frame rate
     faces = []
-
+    face_tracker = []
 
     
     while True:
@@ -71,14 +152,28 @@ def start_feed(video_path, target_resolution=640, frame_skip_rate=5):
         if not ret:
             break
 
-        # Process frame
+        # Find faces every frame_skip_rate frames to improve permformance
         if frame_id % frame_skip_rate == 0:  
             faces = find_faces(frame, frame_scale_factor)
+            face_tracker = identify_valid_faces(face_tracker, faces)
+            faces = [face for (face, count) in face_tracker if count > 2]
 
+
+
+        # Still, draw boxes on every frame to avoid blinking effect when skipping face detection
         frame = draw_faces(frame, faces)
+        # Print Frame ID and number of faces detected on the frame
+        cv2.putText(frame,
+            f"Frame: {frame_id} * Number of Faces: {len(faces)}",
+            (50, 50),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1,
+            (0, 255, 0),
+            2,
+            cv2.LINE_AA)
 
         # Display the frame
-        cv2.imshow("AVI Video", frame)
+        cv2.imshow("Video", frame)
 
         #Press 'q' to quit
         # Minimising the wait time to achieve real-time performance
@@ -99,4 +194,4 @@ if __name__ == "__main__":
 
     # Path to your .mov file
     video_path = "data/IMG_0992.mov"
-    start_feed(video_path, target_resolution=1200, frame_skip_rate=4)
+    start_feed(video_path, target_resolution=1200, frame_skip_rate=2)
