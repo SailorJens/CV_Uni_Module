@@ -53,15 +53,15 @@ def start_feed(video_path, target_resolution=640, frame_skip_rate=5):
     print(f"Scaling video to {min(target_resolution, width)} pixels width for real-time processing. Factor: ", frame_scale_factor)
     print("Press 'q' to quit.")
 
-
-    
-
-
     # Loop through video frames or live feed
     frame_id = 0
     start_time = time.time()
+
     # To buffer faces to avoid blinking when reducing frame rate
     faces = []
+
+
+    
     while True:
         # Read a frame
         ret, frame = cap.read()
