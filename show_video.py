@@ -140,7 +140,7 @@ def start_feed(video_path, target_resolution=640, frame_skip_rate=5):
     start_time = time.time()
 
     # To buffer faces to avoid blinking when reducing frame rate
-    faces = []
+    #faces = []
     face_tracker = []
 
     
@@ -194,4 +194,4 @@ if __name__ == "__main__":
 
     # Path to your .mov file
     video_path = "data/IMG_0992.mov"
-    start_feed(video_path, target_resolution=1200, frame_skip_rate=2)
+    start_feed(video_path, target_resolution=800, frame_skip_rate=1)
