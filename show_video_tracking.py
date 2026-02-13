@@ -22,9 +22,8 @@ def draw_faces(frame, faces):
 
 def find_faces(frame, scale_factor):
     mod_frame = frame.copy()
-    mod_frame = cv2.cvtColor(mod_frame, cv2.COLOR_BGR2GRAY)
     # Resize frame for faster processing
-    mod_frame = cv2.resize(mod_frame, (0, 0), fx=scale_factor, fy=scale_factor)
+    mod_frame = cv2.resize(frame, (0, 0), fx=scale_factor, fy=scale_factor)
     faces = face_cascade.detectMultiScale(mod_frame, scaleFactor=1.1, minNeighbors=5)   
     # Scale face coordinates back to original frame size
     scaled_faces = []
@@ -99,4 +98,4 @@ if __name__ == "__main__":
 
     # Path to your .mov file
     video_path = "data/IMG_0992.mov"
-    start_feed(video_path, target_resolution=1200, frame_skip_rate=4)
+    start_feed(video_path, target_resolution=1200, frame_skip_rate=5)
