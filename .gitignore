@@ -1,9 +1,11 @@
 .DS
 .DS_Store
-.venv
+.venv/
+.venv12/
 __pycache__
 /data
 /weights
 /runs
 yolo26n.pt
 yolo26n-seg.pt
+/ImageProcessor/
